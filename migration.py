@@ -109,6 +109,7 @@ def execute_migration(conn, statements, migration_path):
     except Exception as e:
         # Rollback transaction on error
         conn.rollback()
+        print(f'{bcolors.FAIL}ERROR: {e}{bcolors.ENDC}\n')
         raise e
 
 def migrate_up(with_seed=False):
@@ -199,6 +200,17 @@ def migrate_status():
 
     conn.close()
 
+def migrate_init():
+    if os.path.exists(DB_NAME):
+        print(f"{bcolors.WARNING}Database file already exists. Use the existing file or delete it to initialize a new one.{bcolors.ENDC}")
+        sys.exit(1)
+
+    conn = sqlite3.connect(DB_NAME)
+    create_schema_table(conn)
+    conn.close()
+
+    print(f"{bcolors.OKGREEN}Database file initialized: {DB_NAME}{bcolors.ENDC}")
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='SQLite Migration Script')
     parser.add_argument('command', choices=['up', 'down', 'create', 'reset', 'status', 'init'], help='Migration command')
@@ -207,7 +219,9 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    if args.command == 'up':
+    if args.command == 'init':
+        migrate_init()
+    elif args.command == 'up':
         migrate_up(args.seed)
     elif args.command == 'down':
         if args.args and args.args[0] == 'all':
@@ -228,3 +242,7 @@ if __name__ == '__main__':
         if input(f"{bcolors.WARNING}For safety type 'RESET' before continue: {bcolors.ENDC}") == 'RESET':
             migrate_down()
             migrate_up(args.seed)
+    elif args.command == 'status':
+        if not os.path.exists(DB_NAME):
+            migrate_init()
+        migrate_status()
