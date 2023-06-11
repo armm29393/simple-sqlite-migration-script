@@ -20,6 +20,8 @@ class bcolors:
 DB_NAME = 'migrate.db'
 MIGRATION_DIR = 'migrations'
 SCHEMA_TABLE = '__schema_migrations'
+MIGRATE_Y = '✓'
+MIGRATE_N = '✗'
 
 def create_schema_table(conn):
     cursor = conn.cursor()
@@ -62,17 +64,6 @@ def get_executed_migrations(conn):
     """.format(SCHEMA_TABLE))
     executed_migrations = [row[0] for row in cursor.fetchall()]
     return executed_migrations
-
-def get_latest_migration(conn):
-    cursor = conn.cursor()
-    cursor.execute("""
-        SELECT migration_file FROM {} ORDER BY id DESC LIMIT 1
-    """.format(SCHEMA_TABLE))
-    result = cursor.fetchone()
-    if result:
-        return result[0]
-    else:
-        return None
 
 def execute_migration(conn, statements, migration_path):
     try:
@@ -120,10 +111,7 @@ def execute_migration(conn, statements, migration_path):
         conn.rollback()
         raise e
 
-def migrate_up():
-    if not os.path.exists(MIGRATION_DIR):
-        os.makedirs(MIGRATION_DIR)
-
+def migrate_up(with_seed=False):
     conn = sqlite3.connect(DB_NAME)
     create_schema_table(conn)
 
@@ -147,6 +135,12 @@ def migrate_up():
         """.format(SCHEMA_TABLE), (migration_file,))
         conn.commit()
         print(f"{bcolors.OKGREEN}Executed migration: {migration_file}{bcolors.ENDC}")
+
+    if with_seed:
+        # Import seeder class
+        # seeder = Seeder(conn)
+        # seeder.run()
+        pass
 
     conn.close()
 
@@ -193,12 +187,13 @@ def migrate_status():
     longest_name_length = max(len(migration_file.rsplit(".", 1)[0]) for migration_file in migration_files)
     dash_line = '-' * (longest_name_length + 12)  # Add some padding
 
+    print(dash_line)
     print(f"{'Migration Name': <{longest_name_length}} | {'Migrated': <10}")
     print(dash_line)
 
     for migration_file in migration_files:
         migration_name = migration_file.rsplit(".", 1)[0]
-        migration_status = f"{bcolors.OKGREEN}✓{bcolors.ENDC}" if migration_file in executed_migrations else f"{bcolors.FAIL}✗{bcolors.ENDC}"
+        migration_status = f"{bcolors.OKGREEN}{MIGRATE_Y}{bcolors.ENDC}" if migration_file in executed_migrations else f"{bcolors.FAIL}{MIGRATE_N}{bcolors.ENDC}"
         migration_name_display = migration_name[:longest_name_length] + "..." if len(migration_name) > longest_name_length else migration_name
         print(f"{migration_name_display: <{longest_name_length}} | {migration_status: <10}")
 
@@ -206,13 +201,14 @@ def migrate_status():
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='SQLite Migration Script')
-    parser.add_argument('command', choices=['up', 'down', 'create', 'reset', 'status'], help='Migration command')
+    parser.add_argument('command', choices=['up', 'down', 'create', 'reset', 'status', 'init'], help='Migration command')
     parser.add_argument('args', nargs='*', help='Additional arguments for create command')
+    parser.add_argument('-s', '--seed', action='store_true', help='Apply seed data')
 
     args = parser.parse_args()
 
     if args.command == 'up':
-        migrate_up()
+        migrate_up(args.seed)
     elif args.command == 'down':
         if args.args and args.args[0] == 'all':
             step = None
@@ -225,10 +221,10 @@ if __name__ == '__main__':
             step = 1
         migrate_down(step)
     elif args.command == 'create':
+        if not os.path.exists(MIGRATION_DIR):
+            os.makedirs(MIGRATION_DIR)
         migrate_create(args.args)
     elif args.command == 'reset':
         if input(f"{bcolors.WARNING}For safety type 'RESET' before continue: {bcolors.ENDC}") == 'RESET':
             migrate_down()
-            migrate_up()
-    elif args.command == 'status':
-        migrate_status()
+            migrate_up(args.seed)
