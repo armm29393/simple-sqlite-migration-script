@@ -6,7 +6,16 @@ import os
 import sqlite3
 from datetime import datetime
 
-from utils.bcolors import bcolors
+class bcolors:
+    HEADER = '\033[95m'
+    OKBLUE = '\033[94m'
+    OKCYAN = '\033[96m'
+    OKGREEN = '\033[92m'
+    WARNING = '\033[93m'
+    FAIL = '\033[91m'
+    ENDC = '\033[0m'
+    BOLD = '\033[1m'
+    UNDERLINE = '\033[4m'
 
 DB_NAME = 'migrate.db'
 MIGRATION_DIR = 'migrations'
@@ -126,6 +135,7 @@ def migrate_up():
 
     if len(migration_files) < 1:
         print(f'{bcolors.BOLD}Nothing to migrate.{bcolors.ENDC}')
+        return
 
     for migration_file in migration_files:
         migration_path = os.path.join(MIGRATION_DIR, migration_file)
@@ -152,6 +162,7 @@ def migrate_down(step=None):
 
     if len(migration_files) < 1:
         print(f'{bcolors.BOLD}Nothing to rollback.{bcolors.ENDC}')
+        return
 
     for migration_file in migration_files:
         migration_path = os.path.join(MIGRATION_DIR, migration_file)
@@ -166,9 +177,36 @@ def migrate_down(step=None):
 
     conn.close()
 
+def migrate_status():
+    conn = sqlite3.connect(DB_NAME)
+
+    executed_migrations = get_executed_migrations(conn)
+    migration_files = sorted(
+        file for file in os.listdir(MIGRATION_DIR)
+        if file.endswith('.sql')
+    )
+
+    if len(migration_files) < 1:
+        print(f'{bcolors.BOLD}Migration not found.{bcolors.ENDC}')
+        return
+
+    longest_name_length = max(len(migration_file.rsplit(".", 1)[0]) for migration_file in migration_files)
+    dash_line = '-' * (longest_name_length + 12)  # Add some padding
+
+    print(f"{'Migration Name': <{longest_name_length}} | {'Migrated': <10}")
+    print(dash_line)
+
+    for migration_file in migration_files:
+        migration_name = migration_file.rsplit(".", 1)[0]
+        migration_status = f"{bcolors.OKGREEN}✓{bcolors.ENDC}" if migration_file in executed_migrations else f"{bcolors.FAIL}✗{bcolors.ENDC}"
+        migration_name_display = migration_name[:longest_name_length] + "..." if len(migration_name) > longest_name_length else migration_name
+        print(f"{migration_name_display: <{longest_name_length}} | {migration_status: <10}")
+
+    conn.close()
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='SQLite Migration Script')
-    parser.add_argument('command', choices=['up', 'down', 'create', 'reset'], help='Migration command')
+    parser.add_argument('command', choices=['up', 'down', 'create', 'reset', 'status'], help='Migration command')
     parser.add_argument('args', nargs='*', help='Additional arguments for create command')
 
     args = parser.parse_args()
@@ -192,3 +230,5 @@ if __name__ == '__main__':
         if input(f"{bcolors.WARNING}For safety type 'RESET' before continue: {bcolors.ENDC}") == 'RESET':
             migrate_down()
             migrate_up()
+    elif args.command == 'status':
+        migrate_status()
