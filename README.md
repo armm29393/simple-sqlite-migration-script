@@ -1,92 +1,98 @@
-## SQLite Migration Script
+เมื่อลองให้ chatGPT เขียน script migration ให้..
 
-This is a Python script for managing SQLite database migrations. It allows you to create migration files, apply migrations (up), and revert migrations (down) in your SQLite database.
+# SQLite Migration Script
 
-### Prerequisites
+The SQLite Migration Script is a Python script that allows you to perform database schema migrations using SQL migration files. It provides functionality to create migration files, execute migrations in the 'up' and 'down' directions, and maintain a schema migration history.
+
+## Prerequisites
 
 - Python 3.x
 - SQLite
 
-### Setup
+## Getting Started
 
-1. Copy the migration script (`migration.py`) to your project directory.
+1. Clone the repository or download the migration script file (`migration.py`) to your local machine.
 
-2. Make sure you have the `sqlite3` package installed. You can install it by running the following command:
+2. Install the required dependencies by running the following command:
 
-   ```bash
+   ```
    pip install sqlite3
    ```
 
-3. Create a new directory called `migrations` in your project directory. This directory will be used to store migration files.
+3. Initialize a new SQLite database file (e.g., `migrate.db`) if you don't have one already.
 
-### Usage
+4. Create a new directory named `migrations` in the same directory as the migration script. This directory will store your migration files.
 
-Open a terminal or command prompt and navigate to your project directory.
+## Usage
 
-#### Creating a Migration File
+The migration script supports the following commands:
 
-To create a new migration file, use the `create` command followed by the table name:
+### Create a New Migration
 
-```bash
-python3 migration.py create <table_name>
+To create a new migration file, use the `create` command followed by the desired migration name. For example:
+
+```
+python3 migration.py create users_table
 ```
 
-This will generate a migration file with a timestamp prefix and the specified table name, e.g., `20220101120000-users.sql`. By default, the migration file will contain both the `up` and `down` SQL scripts for creating and dropping the table.
+This command will generate a migration file with the format `<timestamp>-users_table.sql` inside the `migrations` directory.
 
-#### Applying Migrations (Up)
+Open the generated migration file and fill in the migration statements in the `-- +goose Up` and `-- +goose Down` sections.
 
-To apply all pending migrations, use the `up` command:
+### Execute Migrations
 
-```bash
+To apply the migrations and update the database schema, use the `up` command:
+
+```
 python3 migration.py up
 ```
 
-This command will execute all the pending migration files that have not been previously executed. The executed migrations will be recorded in the `__schema_migrations` table.
+This command will execute any pending migrations that haven't been applied yet.
 
-#### Reverting Migrations (Down)
+To revert the last applied migration, use the `down` command:
 
-To revert the last executed migration, use the `down` command:
-
-```bash
+```
 python3 migration.py down
 ```
 
-This command will revert the most recent migration file and remove the corresponding entry from the `__schema_migrations` table.
+This command will revert the last applied migration and roll back the corresponding changes.
 
-To revert a specific number of migrations, use the `down` command followed by the step value:
+If you want to revert a specific number of migrations, you can provide a step count as an argument. For example, to revert the last three migrations, use:
 
-```bash
-python3 migration.py down <step>
+```
+python3 migration.py down 3
 ```
 
-Replace `<step>` with the number of migrations you want to revert. For example, `python3 migration.py down 2` will revert the last two migrations.
+To revert all applied migrations, use the following command:
 
-To revert all executed migrations, use the `down` command with the `all` keyword:
-
-```bash
+```
 python3 migration.py down all
 ```
 
-This command will revert all the executed migrations and clear the `__schema_migrations` table.
+### Reset Migrations
 
-### Summary of Commands
+To reset the migrations and revert all applied migrations, use the `reset` command:
 
-- `create <table_name>`: Generates a new migration file for creating a table with the specified name.
+```
+python3 migration.py reset
+```
 
-- `up`: Applies all pending migrations.
+**Note:** The `reset` command will first execute the `down` command to revert all applied migrations, and then execute the `up` command to reapply all migrations.
 
-- `down`: Reverts the last executed migration.
+### Schema Migration History
 
-- `down <step>`: Reverts a specific number of executed migrations.
+The script maintains a schema migration history by recording the executed migrations in a schema table named `__schema_migrations` within the SQLite database.
 
-- `down all`: Reverts all executed migrations.
+Each time a migration is executed, a record is inserted into the `__schema_migrations` table with the migration file name and the execution timestamp.
 
-### Additional Information
+You can view the executed migrations by querying the `__schema_migrations` table directly.
 
-- Migration files are stored in the `migrations` directory. Each migration file contains the SQL scripts for both the `up` and `down` migrations.
+## Contributing
 
-- The `__schema_migrations` table keeps track of the executed migrations. It stores the migration file name and the execution timestamp.
+Contributions to this SQLite Migration Script are welcome! If you encounter any issues or have suggestions for improvements, please open an issue or submit a pull request on the GitHub repository.
 
-- Make sure to update the `database.db` filename in the script to match your SQLite database file name or path.
+## License
 
-- You can modify the generated migration files to include more complex SQL scripts or additional table alterations as needed.
+This SQLite Migration Script is licensed under the MIT License. See the [LICENSE](LICENSE) file for more details.
+
+---
