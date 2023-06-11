@@ -79,6 +79,14 @@ python3 migration.py reset
 
 **Note:** The `reset` command will first execute the `down` command to revert all applied migrations, and then execute the `up` command to reapply all migrations.
 
+### Migrations Status
+
+The `status` command displays a table showing the migration files and their current status (applied or pending).
+
+```
+python3 migration.py status
+```
+
 ### Schema Migration History
 
 The script maintains a schema migration history by recording the executed migrations in a schema table named `__schema_migrations` within the SQLite database.
